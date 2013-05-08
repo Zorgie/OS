@@ -108,6 +108,7 @@ void * malloc(size_t nbytes)
     base.s.ptr = freep = prevp = &base;
     base.s.size = 0;
   }
+  #if STRATEGY==1
   for(p= prevp->s.ptr;  ; prevp = p, p = p->s.ptr) {
     if(p->s.size >= nunits) {                           /* big enough */
       if (p->s.size == nunits)                          /* exactly */
@@ -124,6 +125,48 @@ void * malloc(size_t nbytes)
       if((p = morecore(nunits)) == NULL)
 	return NULL;                                    /* none left */
   }
+  #endif
+  #if STRATEGY==2
+  Header *bestSoFar = NULL;
+  Header *bestPrev = NULL;
+  for(p= prevp->s.ptr;  ; prevp = p, p = p->s.ptr) {
+    if(p->s.size >= nunits) {                           /* big enough */
+      if (p->s.size == nunits)                          /* exactly */
+	  {
+		prevp->s.ptr = p->s.ptr;
+		freep = prevp;
+		return (void*)(p+1);
+	  }
+      else {                                            /* allocate tail end */
+	/*p->s.size -= nunits;
+	p += p->s.size;
+	p->s.size = nunits;*/
+      }
+	  if(bestSoFar == NULL || p->s.size < bestSoFar->s.size)
+	  {
+		bestSoFar = p;
+		bestPrev = prevp;
+	  }
+		
+	  /*
+      freep = prevp;
+      return (void *)(p+1);*/
+    }
+    if(p == freep)                          /* wrapped around free list */
+	{
+		if (bestSoFar != NULL)
+		{
+			bestSoFar->s.size -= nunits;
+			bestSoFar += bestSoFar->s.size;
+			bestSoFar->s.size = nunits;
+			freep = bestPrev;
+			return (void *)(bestSoFar+1);
+		}
+	    if((p = morecore(nunits)) == NULL)
+			return NULL;                        /* NoNE LEFT*/
+	}            
+  }
+  #endif
 }
 
 void * realloc(void *p, size_t size)
