@@ -7,25 +7,36 @@ echo ""
 echo -n "********************* TEST MERGE ... "
 read answ
 ./t0
+echo -n "********************* TEST MERGE ... "
+read answ
+./t0.5
 echo -n "********************* TEST ALGORITHMS ... "
 read answ
 ./t1
+echo -n "********************* TEST ALGORITHMS ... "
+read answ
+./t1.5
 echo -n "********************* TEST EXTREME USAGE ... "
 read ans
 ./t2
+echo -n "********************* TEST EXTREME USAGE ... "
+read ans
+./t2.5
 echo -n "********************* TEST MALLOC ... "
 read ans
 ./t3
+echo -n "********************* TEST MALLOC ... "
+read ans
+./t3.5
 echo -n "********************* TEST MEMORY ... "
 read ans
 ./t4
-echo -n "********************* TEST REALLOC ... "
+echo -n "********************* TEST MEMORY ... "
+read ans
+./t4.5
+echo -n "********************* TEST PERFORMANCE ... "
 read ans
 ./t5
-echo -n "********************* TEST CRASH  SIMPLE ... "
+echo -n "********************* TEST PERFORMANCE ... "
 read ans
-./t6
-echo -n "********************* TEST CRASH COMPLEX ...  "
-read ans
-./t7
-
+./t5.5
