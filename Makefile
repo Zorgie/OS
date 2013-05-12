@@ -6,9 +6,9 @@ OBJ	= malloc.o tstalgorithms.o  \
 
 BIN	= t0 t1 t2 t3 t4 t5 t0.5 t1.5 t2.5 t3.5 t4.5 t5.5
 
-CFLAGS	= -g -Wall -ansi -DSTRATEGY=2 -O4 -pg
+CFLAGS	= -g -Wall -ansi -DSTRATEGY=1 -O4 -pg
 
-XFLAGS	= -g -Wall -DSTRATEGY=2 -O4 -pg
+XFLAGS	= -g -Wall -DSTRATEGY=1 -O4 -pg
 
 #CC	= gcc -ansi -pedantic -Wall -g -pipe -O -pg
 CC	= gcc 

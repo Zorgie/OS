@@ -69,11 +69,7 @@ int main(int argc, char *argv[])
   MESSAGE("-- This test checks malloc(), free() and realloc()\n");
   srand((unsigned int)time(NULL));
 
-#ifdef MMAP
-  start = endHeap();
-#else
   start = (void *)sbrk(0);
-#endif
 
   for(i=0;i<MAXPOSTS;i++)
     {
@@ -126,11 +122,7 @@ int main(int argc, char *argv[])
 	}
       calcMemUsage(&maxMem);
     }
-#ifdef MMAP
-  end = endHeap();
-#else
   end = (void *) sbrk(0);
-#endif
 
   fprintf(stderr,
 	  "%s: Max memory allocated %d\n%s: Memory consumed %ld\n",

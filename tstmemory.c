@@ -31,22 +31,14 @@ int main(int argc, char *argv[]){
 
   MESSAGE("Testing memory utility\n");
 
-#ifdef MMAP
-  lowbreak = endHeap();
-#else
   lowbreak = (void *) sbrk(0);
-#endif
 
   MESSAGE("Getting small pieces of memory\n");
   for(i = 0; i < TIMES; i++){
     for(j = 0; j < SIZE; j++){
       a[j] = malloc(SMALLSTRING);
     }
-#ifdef MMAP
-    highbreak = endHeap();
-#else
     highbreak = (void *) sbrk(0);
-#endif
     maxbreak = MAX(maxbreak, highbreak);
     for(j = 0; j < SIZE; j++){
       free(a[j]);
@@ -71,11 +63,7 @@ int main(int argc, char *argv[]){
     for(j = 0; j < BIGSIZE; j++){
       b[j] = malloc(TIMESPAGE*pagesize);
     }
-#ifdef MMAP
-    highbreak = endHeap();
-#else
     highbreak = (void *) sbrk(0);
-#endif
 
     maxbreak = MAX(maxbreak, highbreak);
     for(j = 0; j < BIGSIZE; j++){

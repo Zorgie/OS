@@ -23,12 +23,7 @@ int main(int argc, char *argv[]){
   MESSAGE("-- This test will search for memory leaks\n");
   MESSAGE("At most 3.0x pages are allocated and recycled\n");
 
-#ifdef MMAP
-  lowbreak = endHeap();
-#else
   lowbreak = (void *) sbrk(0);
-#endif
-
   pagesize = sysconf(_SC_PAGESIZE);
 
   for(i = 0; i < TIMES; i++){
@@ -40,11 +35,7 @@ int main(int argc, char *argv[]){
     free(r);
   }
 
-#ifdef MMAP
-  highbreak = endHeap();
-#else
   highbreak = (void *) sbrk(0);
-#endif
 
   fprintf(stderr,"%s: Used memory in test: 0x%x (= %2.2f * pagesize)\n",
 	  progname, (unsigned)(highbreak - lowbreak),

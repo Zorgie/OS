@@ -8,6 +8,16 @@
 
 #define NALLOC 1024                                     /* minimum #units to request */
 
+#ifdef STRATEGY
+#if STRATEGY == 1
+static int STRAT = 1;
+#elif STRATEGY == 2
+static int STRAT = 2;
+#endif
+#else
+static int STRAT = 1;
+#endif
+
 typedef long Align;                                     /* for alignment to long boundary */
 
 union header {                                          /* block header */
@@ -50,8 +60,6 @@ void free(void * ap)
   freep = p;
 }
 
-/* morecore: ask system for more memory */
-
 #ifdef MMAP
 
 static void * __endHeap = 0;
@@ -63,7 +71,10 @@ void * endHeap(void)
 }
 #endif
 
-
+/*
+	Asks the system for more space to our free list, increasing the heap size.
+	Returns a header with information about the new block.
+*/
 static Header *morecore(unsigned nu)
 {
   void *cp;
@@ -92,7 +103,10 @@ static Header *morecore(unsigned nu)
   free((void *)(up+1));
   return freep;
 }
-
+/*
+	Allocates space with size nbytes bytes, and returns a pointer to that address. 
+	Returns NULL if it fails.
+*/
 void * malloc(size_t nbytes)
 {
   Header *p, *prevp;
@@ -108,92 +122,74 @@ void * malloc(size_t nbytes)
     base.s.ptr = freep = prevp = &base;
     base.s.size = 0;
   }
-  #if STRATEGY==1
-  for(p= prevp->s.ptr;  ; prevp = p, p = p->s.ptr) {
-    if(p->s.size >= nunits) {                           /* big enough */
-      if (p->s.size == nunits)                          /* exactly */
-	prevp->s.ptr = p->s.ptr;
-      else {                                            /* allocate tail end */
-	p->s.size -= nunits;
-	p += p->s.size;
-	p->s.size = nunits;
-      }
-      freep = prevp;
-      return (void *)(p+1);
-    }
-    if(p == freep)                                      /* wrapped around free list */
-      if((p = morecore(nunits)) == NULL)
-	return NULL;                                    /* none left */
+  if ( STRAT == 1 )
+  {
+		  for(p= prevp->s.ptr;  ; prevp = p, p = p->s.ptr) {
+			if(p->s.size >= nunits) {                            /* A large enough block was found */
+			  if (p->s.size == nunits)                           /* Fits exactly, returns immediately */
+			prevp->s.ptr = p->s.ptr;
+			  else {                                            /* allocate tail end */
+			p->s.size -= nunits;
+			p += p->s.size;
+			p->s.size = nunits;
+			  }
+			  freep = prevp;
+			  return (void *)(p+1);
+			}
+			if(p == freep)                                      /* wrapped around free list, trying to find more space */
+			  if((p = morecore(nunits)) == NULL)
+			return NULL;                                    /* No space left to allocate, returns NULL */
+		  }
   }
-  #endif
-  #if STRATEGY==2
-  Header *bestSoFar = NULL;
-  Header *bestPrev = NULL;
-  for(p= prevp->s.ptr;  ; prevp = p, p = p->s.ptr) {
-    if(p->s.size >= nunits) {                           /* big enough */
-      if (p->s.size == nunits)                          /* exactly */
-	  {
-		prevp->s.ptr = p->s.ptr;
-		freep = prevp;
-		return (void*)(p+1);
-	  }
-      else {                                            /* allocate tail end */
-	/*p->s.size -= nunits;
-	p += p->s.size;
-	p->s.size = nunits;*/
-      }
-	  if(bestSoFar == NULL || p->s.size < bestSoFar->s.size)
-	  {
-		bestSoFar = p;
-		bestPrev = prevp;
-	  }
-
-	  /*
-      freep = prevp;
-      return (void *)(p+1);*/
-    }
-    if(p == freep)                          /* wrapped around free list */
-	{
-		if (bestSoFar != NULL)
-		{
-			bestSoFar->s.size -= nunits;
-			bestSoFar += bestSoFar->s.size;
-			bestSoFar->s.size = nunits;
-			freep = bestPrev;
-			return (void *)(bestSoFar+1);
-		}
-	    if((p = morecore(nunits)) == NULL)
-			return NULL;                        /* NoNE LEFT*/
-	}            
+  if ( STRAT == 2)
+  {
+		  Header *bestSoFar = NULL;
+		  Header *bestPrev = NULL;
+		  for(p= prevp->s.ptr;  ; prevp = p, p = p->s.ptr) {
+			if(p->s.size >= nunits) {                            /* A large enough block was found */
+			  if (p->s.size == nunits)                          /* exactly */
+			  {
+				prevp->s.ptr = p->s.ptr;
+				freep = prevp;
+				return (void*)(p+1);
+			  }
+			  if(bestSoFar == NULL || p->s.size < bestSoFar->s.size) /* A suitable block was found, saves it if it is the best fit yet. */
+			  {
+				bestSoFar = p;
+				bestPrev = prevp;
+			  }
+			}
+			if(p == freep)                          /* Wrapped around free list. */
+			{
+				if (bestSoFar != NULL)				/* If a suitable block has been found, uses the 'snuggest fitting' one. */
+				{
+					bestSoFar->s.size -= nunits;
+					bestSoFar += bestSoFar->s.size;
+					bestSoFar->s.size = nunits;
+					freep = bestPrev;
+					return (void *)(bestSoFar+1);
+				}
+				if((p = morecore(nunits)) == NULL)		/* No block was found, requesting more space, and re-runs the loop. */
+					return NULL;                        /* No more space is available. Returns NULL (failure). */
+			}            
+		  }
   }
-  #endif
+  return NULL;
 }
 
+/*
+	Reallocates a block to a different size. If p == NULL, realloc is equivalent to malloc.
+*/
 void * realloc(void *p, size_t size)
 {
 	if(p == NULL)
-	{
 		return malloc(size);
-	}
 	Header *h = (Header *) p - 1;
 	size_t oldSize = h->s.size * sizeof(Header);
- 	size_t nunits = (size+sizeof(Header)-1)/sizeof(Header) +1;
-		void *np;
-		np = malloc(size);
-		/*size_t aligned = h->s.size;
-		while( aligned % sizeof(Header) != 0)
-		{
-			aligned++;
-		}
-		fprintf(stderr, "%lu %lu %lu| ",size, h->s.size, aligned);*/
-			memcpy(np, p, (size > oldSize -sizeof(Header))? oldSize-sizeof(Header): size);
-		free(p);
-		return np;
-	/*
-	Header *nh = (Header*) p + size;
-	nh->s.size = h->s.size - nunits - 1; 
-	h->s.size = nunits;
-	nh->s.ptr = h->s.ptr;
-	h->s.ptr = nh;
-	return p;*/
+	void *np = malloc(size);
+	memcpy(np, p, (size > oldSize -sizeof(Header))? oldSize-sizeof(Header): size);
+	free(p);
+	return np;
 }
+
+
